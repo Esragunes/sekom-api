@@ -12,18 +12,31 @@ db = client["techlog_db"]
 
 @app.route("/")
 def index():
-    return jsonify({"mesaj": "Sekom Tech-Log API ayakta!"})
+    return jsonify({"mesaj": "Sekom Tech-Log Hub API v2 Ayakta!"})
 
 @app.route("/logs", methods=["GET"])
 def get_logs():
-    logs = list(db.logs.find({}, {"_id": 0}))
+    # Sadece listeleme için resimsiz verileri çekelim (hız için)
+    logs = list(db.logs.find({}, {"resim": 0}))
+    for log in logs:
+        log["_id"] = str(log["_id"])
     return jsonify(logs)
+
+@app.route("/logs/<log_id>", methods=["GET"])
+def get_log_detail(log_id):
+    from bson.objectid import ObjectId
+    log = db.logs.find_one({"_id": ObjectId(log_id)})
+    if log:
+        log["_id"] = str(log["_id"])
+        return jsonify(log)
+    return jsonify({"hata": "Kayıt bulunamadı"}), 404
 
 @app.route("/logs", methods=["POST"])
 def add_log():
     data = request.json
-    db.logs.insert_one(data)
-    return jsonify({"mesaj": "Kayıt eklendi!"}), 201
+    # calisan, durum, aciklama ve resim (base64) bekliyoruz
+    result = db.logs.insert_one(data)
+    return jsonify({"mesaj": "Kayıt eklendi!", "id": str(result.inserted_id)}), 201
 
 @app.route("/search", methods=["GET"])
 def search():
@@ -33,8 +46,10 @@ def search():
             {"calisan": {"$regex": keyword, "$options": "i"}},
             {"aciklama": {"$regex": keyword, "$options": "i"}}
         ]},
-        {"_id": 0}
+        {"resim": 0}
     ))
+    for r in results:
+        r["_id"] = str(r["_id"])
     return jsonify(results)
 
 if __name__ == "__main__":
