@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app)
 
-# MongoDB bağlantısı
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://sekom_admin:Sekom123!@mongodb:27017/techlog_db?authSource=techlog_db")
 client = MongoClient(MONGO_URI)
 db = client["techlog_db"]
@@ -22,15 +23,15 @@ def get_logs():
 def add_log():
     data = request.json
     db.logs.insert_one(data)
-    return jsonify({"mesaj": "Log eklendi!"}), 201
+    return jsonify({"mesaj": "Kayıt eklendi!"}), 201
 
 @app.route("/search", methods=["GET"])
 def search():
     keyword = request.args.get("q", "")
     results = list(db.logs.find(
         {"$or": [
-            {"muhendis": {"$regex": keyword, "$options": "i"}},
-            {"not": {"$regex": keyword, "$options": "i"}}
+            {"calisan": {"$regex": keyword, "$options": "i"}},
+            {"aciklama": {"$regex": keyword, "$options": "i"}}
         ]},
         {"_id": 0}
     ))
